@@ -100,17 +100,23 @@ def resolve_vars(argv, vars):
     return argv
 
 
+def push_pythonpath(env, path):
+    env["PYTHONPATH"] = f"{path}:" + env.get("PYTHONPATH", "")
+    return env
+
+
 def run_script(parser):
     args, argv = parser.parse_known_args()
     argv += prepare_argv(args)
     argdict = parse_argv(argv)
     argv = resolve_vars(argv, argdict)
+    env = os.environ.copy()
     if args.run_module:
-        sys.path.insert(0, args.module_path)
+        env = push_pythonpath(env, args.module_path)
         argv = [args.python, "-m", args.scriptpath] + argv
     else:
         argv = [args.python, args.scriptpath] + argv
-    subprocess.call(argv)
+    subprocess.call(argv, env=env)
 
 
 if __name__ == "__main__":

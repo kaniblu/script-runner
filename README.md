@@ -74,9 +74,8 @@ will ensure that `epoch` variable is resolved and the script is called with foll
 python train.py --ckpt-path model-e12 --log-path logs-e12.txt --epoch 12
 ```
 
-Note that there is no way for `runscript` to know possible arguments, hence even
-if `--epoch` is not one of the valid script arguments, it will still be passed
-down to the script. In such cases, the script should [partially parse arguments](https://docs.python.org/3/library/argparse.html#partial-parsing).
+Note that there is no way for `runscript` to distinguish valid arguments of the script, hence all arguments, including `--epoch` in above example, will be passed
+down to script arguments indiscriminately. In such cases, the script should be modified to [partially parse arguments](https://docs.python.org/3/library/argparse.html#partial-parsing) to avoid errors.
 
 
 ### Misc. ###
