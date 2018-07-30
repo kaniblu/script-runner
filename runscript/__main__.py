@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import yaml
@@ -93,10 +94,17 @@ def prepare_argv(args):
 
 
 def resolve_vars(argv, vars):
-    for i in range(len(argv)):
-        arg = argv[i]
-        if "{" in arg and "}" in arg:
-            argv[i] = arg.format(**vars)
+    format_pat = re.compile(r"{[a-zA-Z0-9\-_]+\}")
+    delta = True
+    while delta:
+        delta = False
+        for i in range(len(argv)):
+            arg = argv[i]
+            if format_pat.search(arg) is not None:
+                arg_f = arg.format(**vars)
+                delta = arg_f != arg
+                argv[i] = arg_f
+
     return argv
 
 
