@@ -74,6 +74,13 @@ will ensure that `epoch` variable is resolved and the script is called with foll
 python train.py --ckpt-path model-e12 --log-path logs-e12.txt --epoch 12
 ```
 
+There are also pre-defined keywords such as
+
+  * `{%module-name%}`: name of the running module
+  * `{%working-dir%}`: current running directory
+  * `{%config-dir%}`: current config file directory.
+  * `{%config-name%}`: name of the current config file
+   
 Note that there is no way for `runscript` to distinguish valid arguments of the script, hence all arguments, including `--epoch` in above example, will be passed
 down to script arguments indiscriminately. In such cases, the script should be modified to [partially parse arguments](https://docs.python.org/3/library/argparse.html#partial-parsing) to avoid errors.
 

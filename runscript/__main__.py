@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 import json
 import yaml
 import argparse
@@ -10,10 +9,17 @@ import collections
 
 parser = argparse.ArgumentParser(fromfile_prefix_chars="@")
 parser.add_argument("scriptpath")
+parser.add_argument("--test", action="store_true", default=False)
 parser.add_argument("--python", type=str, default="python")
 parser.add_argument("--run-module", action="store_true", default=False)
 parser.add_argument("--module-path", type=str, default=None)
 parser.add_argument("--args", type=str, action="append", default=[])
+parser.add_argument("--precedence", type=str, default="commandline",
+                    choices=["commandline", "configfile"],
+                    help="indicates argument precedence in case of argument "
+                         "conflicts. 1) commandline: command-line arguments "
+                         "will have higher importance. 2) configfile: config "
+                         "file arguments will have higher importance.")
 
 
 def dict_to_argv(dic: dict):
@@ -89,7 +95,18 @@ def load_args(path):
 def prepare_argv(args):
     argv = []
     for arg_path in args.args:
-        argv.extend(load_args(arg_path))
+        arg_dir = os.path.dirname(os.path.realpath(arg_path))
+        arg_name = os.path.basename(os.path.realpath(arg_path))
+        cargv = load_args(arg_path)
+        cargv = [
+            v.replace("{%config-dir%}", arg_dir)
+             .replace("{%working-dir%}", os.getcwd())
+             .replace("{%config-name%}", arg_name)
+             .replace("{%module-name%}", args.scriptpath)
+            if isinstance(v, str) else v
+            for v in cargv
+        ]
+        argv.extend(cargv)
     return argv
 
 
@@ -114,9 +131,19 @@ def push_pythonpath(env, path):
 
 
 def run_script(parser):
-    args, argv = parser.parse_known_args()
-    argv += prepare_argv(args)
-    argdict = parse_argv(argv)
+    args, misc_argv = parser.parse_known_args()
+    argdict = parse_argv(prepare_argv(args))
+    misc_argdict = parse_argv(misc_argv)
+
+    if args.precedence == "commandline":
+        argdict.update(misc_argdict)
+    elif args.precedence == "configfile":
+        misc_argdict.update(argdict)
+        argdict = misc_argdict
+    else:
+        raise ValueError(f"unrecognized precedence type: {args.precedence}")
+
+    argv = dict_to_argv(argdict)
     argv = resolve_vars(argv, argdict)
     env = os.environ.copy()
     if args.run_module:
@@ -124,7 +151,10 @@ def run_script(parser):
         argv = [args.python, "-m", args.scriptpath] + argv
     else:
         argv = [args.python, args.scriptpath] + argv
-    subprocess.call(argv, env=env)
+    if args.test:
+        print(" ".join(argv))
+    else:
+        subprocess.call(argv, env=env)
 
 
 if __name__ == "__main__":

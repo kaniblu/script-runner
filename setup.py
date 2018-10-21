@@ -1,10 +1,11 @@
 from setuptools import setup
 
-__VERSION__ = "0.1.1"
+from runscript import __version__
+
 
 setup(
     name='script-runner',
-    version=__VERSION__,
+    version=__version__,
     license="GPL",
     description='A wrapper for running scripts',
     author='Kang Min Yoo',
