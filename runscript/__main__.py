@@ -7,20 +7,53 @@ import subprocess
 import collections
 
 
-parser = argparse.ArgumentParser(fromfile_prefix_chars="@")
-parser.add_argument("scriptpath")
-parser.add_argument("--test", action="store_true", default=False)
-parser.add_argument("--python", type=str, default="python")
-parser.add_argument("--run-module", action="store_true", default=False)
-parser.add_argument("--module-path", type=str, default=None)
-parser.add_argument("--args", type=str, action="append", default=[])
+parser = argparse.ArgumentParser(
+    description="Run python scripts (that supports argparse-like argument "
+                "syntax) from a list of configuration files.",
+    fromfile_prefix_chars="@",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+)
+parser.add_argument("script",
+                    help="A script or a module to run. If it is a script, "
+                         "supply the path of the script. If it is a module, "
+                         "specify the module name, and the path at which the "
+                         "module resides must be supplied to '--module-path' "
+                         "option. To run modules, '--run-module' option must "
+                         "also be supplied.")
+parser.add_argument("--dry-run", action="store_true", default=False,
+                    help="Print the final command-line arguments and do not "
+                         "actually run the command.")
+parser.add_argument("--python", type=str, default="python",
+                    help="The python executable to use (i.e. python3.6, etc.)")
+parser.add_argument("--run-module", action="store_true", default=False,
+                    help="Run the python script as a module "
+                         "(i.e. 'python -m <script>). "
+                         "Must provide '--module-path'.")
+parser.add_argument("--module-path", type=str, default=None,
+                    help="The directory where the module resides.")
+parser.add_argument("--args", type=str, action="append", default=[],
+                    help="Path to a configuration file. May provide multiple "
+                         "configuration files. The configuration file can be "
+                         "a json or a yaml file, and the command-line "
+                         "arguments are generated with the following rules: "
+                         "1) each key-value generates ['--<key>', '<value>'] "
+                         "arguments; 2) if the value is boolean type, the key "
+                         "is interpreted as a flag option, i.e. ['--<key>']; "
+                         "3) if the value is an array, the key is interpreted "
+                         "as a repeatable option, i.e. ['--<key>', '<value1>', "
+                         "'--<key>', '<value2>', ... ]; 4) currently dictionary "
+                         "type is not supported.")
 parser.add_argument("--precedence", type=str, default="commandline",
                     choices=["commandline", "configfile"],
-                    help="indicates argument precedence in case of argument "
+                    help="Indicates argument precedence in case of argument "
                          "conflicts. 1) commandline: command-line arguments "
-                         "will have higher importance. 2) configfile: config "
-                         "file arguments will have higher importance.")
+                         "will have higher precedence. 2) configfile: config "
+                         "file arguments will have higher precedence.")
 
+
+def main():
+    run_script(parser)
+    
 
 def dict_to_argv(dic: dict):
     argv = []
@@ -67,6 +100,8 @@ def parse_argv(argv: list):
         else:
             val = arg
             key, val = flush(key, val)
+
+    flush(key, val)
     return args
 
 
@@ -102,7 +137,7 @@ def prepare_argv(args):
             v.replace("{%config-dir%}", arg_dir)
              .replace("{%working-dir%}", os.getcwd())
              .replace("{%config-name%}", arg_name)
-             .replace("{%module-name%}", args.scriptpath)
+             .replace("{%module-name%}", args.script)
             if isinstance(v, str) else v
             for v in cargv
         ]
@@ -148,14 +183,14 @@ def run_script(parser):
     env = os.environ.copy()
     if args.run_module:
         env = push_pythonpath(env, args.module_path)
-        argv = [args.python, "-m", args.scriptpath] + argv
+        argv = [args.python, "-m", args.script] + argv
     else:
-        argv = [args.python, args.scriptpath] + argv
-    if args.test:
+        argv = [args.python, args.script] + argv
+    if args.dry_run:
         print(" ".join(argv))
     else:
         subprocess.call(argv, env=env)
 
 
 if __name__ == "__main__":
-    run_script(parser)
+    main()
