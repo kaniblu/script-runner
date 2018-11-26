@@ -89,7 +89,12 @@ def parse_argv(argv: list):
             return key, val
         if val is None:
             val = True
-        args[key] = val
+        if key in args:
+            if not isinstance(args[key], list):
+                args[key] = [args[key]]
+            args[key].append(val)
+        else:
+            args[key] = val
         return None, None
 
     while argv:
