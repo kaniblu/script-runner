@@ -2,6 +2,7 @@ import os
 import re
 import json
 import yaml
+import shlex
 import argparse
 import subprocess
 import collections
@@ -192,7 +193,7 @@ def run_script(parser):
     else:
         argv = [args.python, args.script] + argv
     if args.dry_run:
-        print(" ".join(argv))
+        print(" ".join(map(shlex.quote, argv)))
     else:
         subprocess.call(argv, env=env)
 
