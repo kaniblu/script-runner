@@ -2,7 +2,6 @@ from setuptools import setup
 
 from runscript import __version__
 
-
 setup(
     name="script-runner",
     version=__version__,
@@ -21,6 +20,9 @@ setup(
     platforms=[
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX :: Linux",
+    ],
+    install_requires=[
+        "pyyaml"
     ],
     entry_points={
         "console_scripts": ["runscript=runscript.__main__:main"]

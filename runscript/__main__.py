@@ -8,53 +8,65 @@ import subprocess
 import collections
 
 
-parser = argparse.ArgumentParser(
-    description="Run python scripts (that supports argparse-like argument "
-                "syntax) from a list of configuration files.",
-    fromfile_prefix_chars="@",
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter
-)
-parser.add_argument("script",
-                    help="A script or a module to run. If it is a script, "
-                         "supply the path of the script. If it is a module, "
-                         "specify the module name, and the path at which the "
-                         "module resides must be supplied to '--module-path' "
-                         "option. To run modules, '--run-module' option must "
-                         "also be supplied.")
-parser.add_argument("--dry-run", action="store_true", default=False,
-                    help="Print the final command-line arguments and do not "
-                         "actually run the command.")
-parser.add_argument("--python", type=str, default="python",
-                    help="The python executable to use (i.e. python3.6, etc.)")
-parser.add_argument("--run-module", action="store_true", default=False,
-                    help="Run the python script as a module "
-                         "(i.e. 'python -m <script>). "
-                         "Must provide '--module-path'.")
-parser.add_argument("--module-path", type=str, default=None,
-                    help="The directory where the module resides.")
-parser.add_argument("--args", type=str, action="append", default=[],
-                    help="Path to a configuration file. May provide multiple "
-                         "configuration files. The configuration file can be "
-                         "a json or a yaml file, and the command-line "
-                         "arguments are generated with the following rules: "
-                         "1) each key-value generates ['--<key>', '<value>'] "
-                         "arguments; 2) if the value is boolean type, the key "
-                         "is interpreted as a flag option, i.e. ['--<key>']; "
-                         "3) if the value is an array, the key is interpreted "
-                         "as a repeatable option, i.e. ['--<key>', '<value1>', "
-                         "'--<key>', '<value2>', ... ]; 4) currently dictionary "
-                         "type is not supported.")
-parser.add_argument("--precedence", type=str, default="commandline",
-                    choices=["commandline", "configfile"],
-                    help="Indicates argument precedence in case of argument "
-                         "conflicts. 1) commandline: command-line arguments "
-                         "will have higher precedence. 2) configfile: config "
-                         "file arguments will have higher precedence.")
+def create_parser():
+    parser = argparse.ArgumentParser(
+        description="Run python scripts (that supports argparse-like argument "
+                    "syntax) from a list of configuration files.",
+        fromfile_prefix_chars="@",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "script",
+        help="A script or a module to run. If it is a script, "
+             "supply the path of the script. If it is a module, "
+             "specify the module name, and the path at which the "
+             "module resides must be supplied to '--module-path' "
+             "option. To run modules, '--run-module' option must "
+             "also be supplied."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", default=False,
+        help="Print the final command-line arguments and do not "
+             "actually run the command."
+    )
+    parser.add_argument(
+        "--python", type=str, default="python",
+        help="The python executable to use (i.e. python3.6, etc.)"
+    )
+    parser.add_argument(
+        "--run-module", action="store_true", default=False,
+        help="Run the python script as a module "
+             "(i.e. 'python -m <script>). "
+             "Must provide '--module-path'."
+    )
+    parser.add_argument(
+        "--module-path", type=str, default=None,
+        help="The directory where the module resides."
+    )
+    parser.add_argument(
+        "--args", type=str, action="append", default=[],
+        help="Path to a configuration file. May provide multiple "
+             "configuration files. The configuration file can be "
+             "a json or a yaml file, and the command-line "
+             "arguments are generated with the following rules: "
+             "1) each key-value generates ['--<key>', '<value>'] "
+             "arguments; 2) if the value is boolean type, the key "
+             "is interpreted as a flag option, i.e. ['--<key>']; "
+             "3) if the value is an array, the key is interpreted "
+             "as a repeatable option, i.e. ['--<key>', '<value1>', "
+             "'--<key>', '<value2>', ... ]; 4) currently "
+             "dictionary type is not supported."
+    )
+    parser.add_argument(
+        "--precedence", type=str, default="commandline",
+        choices=["commandline", "configfile"],
+        help="Indicates argument precedence in case of argument "
+             "conflicts. 1) commandline: command-line arguments "
+             "will have higher precedence. 2) configfile: config "
+             "file arguments will have higher precedence."
+    )
+    return parser
 
-
-def main():
-    run_script(parser)
-    
 
 def dict_to_argv(dic: dict):
     argv = []
@@ -122,7 +134,7 @@ def load_args(path):
     if extname == ".json":
         load_cls = json.load
     elif extname == ".yml":
-        load_cls = yaml.load
+        load_cls = yaml.safe_load
     else:
         raise ValueError(f"unknown extension: {extname}")
 
@@ -141,9 +153,9 @@ def prepare_argv(args):
         cargv = load_args(arg_path)
         cargv = [
             v.replace("{%config-dir%}", arg_dir)
-             .replace("{%working-dir%}", os.getcwd())
-             .replace("{%config-name%}", arg_name)
-             .replace("{%module-name%}", args.script)
+                .replace("{%working-dir%}", os.getcwd())
+                .replace("{%config-name%}", arg_name)
+                .replace("{%module-name%}", args.script)
             if isinstance(v, str) else v
             for v in cargv
         ]
@@ -196,6 +208,10 @@ def run_script(parser):
         print(" ".join(map(shlex.quote, argv)))
     else:
         subprocess.call(argv, env=env)
+
+
+def main():
+    run_script(create_parser())
 
 
 if __name__ == "__main__":
